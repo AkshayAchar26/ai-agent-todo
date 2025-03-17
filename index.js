@@ -108,7 +108,7 @@ const tools = {
 		getAllTodosFunctionDeclaration,
 		createTodoFunctionDeclaration,
 		searchTodoFunctionDeclaration,
-		deleteTodoFunctionDeclaration,	
+		deleteTodoFunctionDeclaration,
 	],
 };
 
@@ -136,33 +136,48 @@ async function main() {
 
 		try {
 			const result = await chat.sendMessage(prompt);
-			console.log("Assistant:", result.response.text());
 
 			const functionCalls = result.response.functionCalls();
+			functionCalls ?? console.log("Assistant:", result.response.text());
 
 			if (functionCalls?.length) {
+				let apiRes = [];
+				let funName = [];
 				for (const call of functionCalls) {
 					try {
 						const apiResponse = await functions[call.name](
 							call.args
 						);
-						const result2 = await chat.sendMessage([
-							{
-								function_response: {
-									name: call.name,
-									response: {
-										todos: apiResponse,
-									},
-								},
-							},
-						]);
+						apiRes.push(apiResponse);
+						funName.push(call.name);
 
-						console.log("Assistant:", result2.response.text());
+						// const result2 = await chat.sendMessage([
+						// 	{
+						// 		function_response: {
+						// 			name: call.name,
+						// 			response: {
+						// 				todos: apiResponse,
+						// 			},
+						// 		},
+						// 	},
+						// ]);
 					} catch (error) {
 						console.error("Error:", error);
 						console.log("Assistant: Operation failed");
 					}
 				}
+				const res2Arr = funName.map((name, index) => {
+					return {
+						function_response: {
+							name: name,
+							response: {
+								todos: apiRes[index],
+							},
+						},
+					};
+				});
+				const result2 = await chat.sendMessage(res2Arr);
+				console.log("Assistant:", result2.response.text());
 			}
 		} catch (error) {
 			console.error("Chat Error:", error);
